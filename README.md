@@ -1,7 +1,7 @@
 ﻿# Polymarket Wallet Analytics and Copy Trading
 
 ## Project overview
-Polymarket Wallet Analytics is a monorepo that indexes Polygon prediction market trades, analyzes wallet performance, and builds non-custodial copy-trading transactions. The frontend is a dark-mode React dashboard built with Vite, Tailwind, and TypeScript. The backend is an Express API in TypeScript with a Polygon event indexer, analytics engine, and copy-trade builder backed by MongoDB. The UI supports MetaMask and Phantom (EVM) wallets on Polygon.
+Polymarket Wallet Analytics is a monorepo that indexes Polygon prediction market trades, analyzes wallet performance, and builds non-custodial copy-trading transactions. The frontend is a dark-mode React dashboard built with Vite, Tailwind, and TypeScript. The backend is an Express API in TypeScript with a Polygon event indexer, analytics engine, and copy-trade builder backed by MongoDB. The UI supports MetaMask and Phantom (EVM) wallets on Polygon...
 
 ## Architecture diagram
 
