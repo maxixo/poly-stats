@@ -62,6 +62,7 @@ The frontend runs on `http://localhost:5173` and the backend on `http://localhos
 - `INDEXER_START_BLOCK`: Optional starting block for backfills.
 - `INDEXER_CONFIRMATIONS`: Number of confirmations before indexing (default `3`).
 - `INDEXER_POLL_INTERVAL_MS`: Polling interval in ms (default `15000`).
+- `INDEXER_MAX_RANGE`: Max block range per `eth_getLogs` request (default `1000`).
 - `PRICE_DECIMALS`: Price decimals for trade parsing (default `6`).
 - `SIZE_DECIMALS`: Size decimals for trade parsing (default `6`).
 

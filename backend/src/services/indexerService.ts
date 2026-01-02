@@ -7,7 +7,8 @@ const require = createRequire(import.meta.url);
 const exchangeAbi = require("../abi/polymarketExchange.json") as InterfaceAbi;
 
 const DEFAULT_BACKFILL = 5000;
-const MAX_RANGE = 2000;
+const DEFAULT_MAX_RANGE = 1000;
+let adaptiveMaxRange = DEFAULT_MAX_RANGE;
 
 type IndexedLog = Log & { logIndex?: number; index?: number };
 
@@ -30,6 +31,22 @@ const getEnvNumber = (key: string, fallback: number | null): number | null => {
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const getMaxRange = (): number => {
+  const configured = getEnvNumber("INDEXER_MAX_RANGE", DEFAULT_MAX_RANGE) ?? DEFAULT_MAX_RANGE;
+  adaptiveMaxRange = Math.min(adaptiveMaxRange, configured);
+  adaptiveMaxRange = Math.max(1, Math.floor(adaptiveMaxRange));
+  return adaptiveMaxRange;
+};
+
+const isRangeTooLargeError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const message = (error as { message?: string }).message ?? "";
+  const nestedMessage = (error as { error?: { message?: string } }).error?.message ?? "";
+  return `${message} ${nestedMessage}`.toLowerCase().includes("block range is too large");
 };
 
 const getSide = (parsedArgs: ParsedArgs): TradeDoc["side"] => {
@@ -172,6 +189,7 @@ export const backfillTrades = async (): Promise<void> => {
   const priceDecimals = getEnvNumber("PRICE_DECIMALS", 6) ?? 6;
   const sizeDecimals = getEnvNumber("SIZE_DECIMALS", 6) ?? 6;
   const confirmations = getEnvNumber("INDEXER_CONFIRMATIONS", 3) ?? 3;
+  let maxRange = getMaxRange();
 
   const latestBlock = await provider.getBlockNumber();
   const confirmedBlock = Math.max(latestBlock - confirmations, 0);
@@ -191,17 +209,29 @@ export const backfillTrades = async (): Promise<void> => {
     return;
   }
 
-  for (let start = fromBlock; start <= confirmedBlock; start += MAX_RANGE) {
-    const end = Math.min(start + MAX_RANGE - 1, confirmedBlock);
-    const logs = (await provider.getLogs({
-      address: POLYMARKET_EXCHANGE,
-      fromBlock: start,
-      toBlock: end,
-      topics: [tradeTopic]
-    })) as IndexedLog[];
-    const tradeDocs = await buildTrades(provider, iface, logs, priceDecimals, sizeDecimals);
-    await saveTrades(tradeDocs);
-    await setLastProcessedBlock(POLYMARKET_EXCHANGE, end);
+  let start = fromBlock;
+  while (start <= confirmedBlock) {
+    const end = Math.min(start + maxRange - 1, confirmedBlock);
+    try {
+      const logs = (await provider.getLogs({
+        address: POLYMARKET_EXCHANGE,
+        fromBlock: start,
+        toBlock: end,
+        topics: [tradeTopic]
+      })) as IndexedLog[];
+      const tradeDocs = await buildTrades(provider, iface, logs, priceDecimals, sizeDecimals);
+      await saveTrades(tradeDocs);
+      await setLastProcessedBlock(POLYMARKET_EXCHANGE, end);
+      start = end + 1;
+    } catch (error) {
+      if (isRangeTooLargeError(error) && maxRange > 1) {
+        maxRange = Math.max(1, Math.floor(maxRange / 2));
+        adaptiveMaxRange = Math.min(adaptiveMaxRange, maxRange);
+        console.warn(`Indexer range too large for RPC; reducing to ${maxRange} blocks`);
+        continue;
+      }
+      throw error;
+    }
   }
 };
 

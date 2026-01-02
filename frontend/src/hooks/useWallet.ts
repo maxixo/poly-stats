@@ -109,6 +109,11 @@ export const useWallet = () => {
       const nextProvider = new BrowserProvider(rawProvider);
       const accounts = (await nextProvider.send("eth_requestAccounts", [])) as string[];
       const network = await nextProvider.getNetwork();
+      console.log("[wallet] connected", {
+        wallet: targetWallet,
+        account: accounts?.[0] || "",
+        chainId: Number(network.chainId)
+      });
       setProvider(nextProvider);
       setAccount(accounts?.[0] || "");
       setChainId(Number(network.chainId));
