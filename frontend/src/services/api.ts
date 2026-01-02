@@ -61,6 +61,9 @@ export type TrendingResponse = {
   signals: SignalItem[];
 };
 
+export type GammaMarketsResponse = unknown;
+export type ClobMarketsResponse = unknown;
+
 export type TradeTx = {
   to: string;
   data: string;
@@ -88,6 +91,23 @@ export type CopyExecuteResponse = {
   transaction: TradeTx;
 };
 
+type QueryParams = Record<string, string | number | boolean | null | undefined>;
+
+const withQuery = (path: string, params?: QueryParams): string => {
+  if (!params) {
+    return path;
+  }
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined) {
+      return;
+    }
+    searchParams.set(key, String(value));
+  });
+  const suffix = searchParams.toString();
+  return suffix ? `${path}?${suffix}` : path;
+};
+
 const request = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
   const res = await fetch(`${API_URL}${path}`, {
     headers: {
@@ -107,6 +127,8 @@ const request = async <T>(path: string, options: RequestInit = {}): Promise<T> =
 
 export const api = {
   getTrending: () => request<TrendingResponse>("/api/markets/trending"),
+  getGammaMarkets: (params?: QueryParams) => request<GammaMarketsResponse>(withQuery("/api/markets/gamma", params)),
+  getClobMarkets: (params?: QueryParams) => request<ClobMarketsResponse>(withQuery("/api/markets/clob", params)),
   getTopWallets: (limit = 10) => request<TopWalletsResponse>(`/api/wallets/top?limit=${limit}`),
   getWallet: (address: string) => request<WalletDetailResponse>(`/api/wallets/${address}`),
   subscribeCopy: (data: {

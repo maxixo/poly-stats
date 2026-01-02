@@ -92,7 +92,12 @@ const computeStrategyTags = async (wallet: string, trades: TradeDoc[]): Promise<
   if (trades.length >= 10) {
     const gaps: number[] = [];
     for (let i = 1; i < trades.length; i += 1) {
-      gaps.push((trades[i].timestamp.getTime() - trades[i - 1].timestamp.getTime()) / 60000);
+      const current = trades[i];
+      const previous = trades[i - 1];
+      if (!current || !previous) {
+        continue;
+      }
+      gaps.push((current.timestamp.getTime() - previous.timestamp.getTime()) / 60000);
     }
     const avgGap = gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length;
     if (avgGap < 10 && avgSize < globalAvg) {

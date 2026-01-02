@@ -1,7 +1,10 @@
 ﻿import { JsonRpcProvider, Interface, formatUnits, type Log } from "ethers";
 import Trade, { type TradeDoc } from "../models/Trade.js";
+import type { InterfaceAbi } from "ethers";
+import { createRequire } from "node:module";
 import IndexerState from "../models/IndexerState.js";
-import exchangeAbi from "../abi/polymarketExchange.json" assert { type: "json" };
+const require = createRequire(import.meta.url);
+const exchangeAbi = require("../abi/polymarketExchange.json") as InterfaceAbi;
 
 const DEFAULT_BACKFILL = 5000;
 const MAX_RANGE = 2000;
@@ -17,6 +20,8 @@ type ParsedArgs = {
   price: bigint;
   size: bigint;
 };
+
+type TradeInsert = Omit<TradeDoc, "createdAt" | "updatedAt">;
 
 const getEnvNumber = (key: string, fallback: number | null): number | null => {
   const value = process.env[key];
@@ -68,7 +73,7 @@ const buildTrades = async (
   logs: IndexedLog[],
   priceDecimals: number,
   sizeDecimals: number
-): Promise<TradeDoc[]> => {
+): Promise<TradeInsert[]> => {
   const blockCache = new Map<number, Date>();
 
   const getTimestamp = async (blockNumber: number): Promise<Date> => {
@@ -87,7 +92,7 @@ const buildTrades = async (
     return timestamp;
   };
 
-  const tradeDocs: TradeDoc[] = [];
+  const tradeDocs: TradeInsert[] = [];
 
   for (const log of logs) {
     let parsed: ParsedLog | null = null;
@@ -120,7 +125,7 @@ const buildTrades = async (
   return tradeDocs;
 };
 
-const saveTrades = async (tradeDocs: TradeDoc[]): Promise<void> => {
+const saveTrades = async (tradeDocs: TradeInsert[]): Promise<void> => {
   if (!tradeDocs.length) {
     return;
   }
@@ -158,7 +163,11 @@ export const backfillTrades = async (): Promise<void> => {
 
   const provider = new JsonRpcProvider(POLYGON_RPC);
   const iface = new Interface(exchangeAbi);
-  const tradeTopic = iface.getEvent("Trade").topicHash;
+  const tradeEvent = iface.getEvent("Trade");
+  if (!tradeEvent) {
+    throw new Error("Trade event not found in exchange ABI");
+  }
+  const tradeTopic = tradeEvent.topicHash;
 
   const priceDecimals = getEnvNumber("PRICE_DECIMALS", 6) ?? 6;
   const sizeDecimals = getEnvNumber("SIZE_DECIMALS", 6) ?? 6;

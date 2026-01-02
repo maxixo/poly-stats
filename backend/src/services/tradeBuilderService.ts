@@ -1,5 +1,9 @@
 ﻿import { Interface, parseUnits } from "ethers";
-import exchangeAbi from "../abi/polymarketExchange.json" assert { type: "json" };
+import type { InterfaceAbi } from "ethers";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const exchangeAbi = require("../abi/polymarketExchange.json") as InterfaceAbi;
 
 export type TradeBuildInput = {
   marketId: string;

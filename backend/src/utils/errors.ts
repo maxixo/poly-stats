@@ -10,7 +10,8 @@ export const errorHandler = (err: unknown, req: Request, res: Response, next: Ne
     res.status(400).json({ error: "Validation failed", details: err.errors });
     return;
   }
-  const status = typeof (err as { status?: number }).status === "number" ? (err as { status?: number }).status : 500;
+  const statusValue = (err as { status?: number }).status;
+  const status = typeof statusValue === "number" ? statusValue : 500;
   const message = (err as { message?: string }).message || "Server error";
   res.status(status).json({ error: message });
 };

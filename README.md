@@ -55,6 +55,9 @@ The frontend runs on `http://localhost:5173` and the backend on `http://localhos
 - `MONGO_URI`: MongoDB connection string.
 - `POLYGON_RPC`: Polygon JSON-RPC URL.
 - `POLYMARKET_EXCHANGE`: Exchange contract address that emits Trade events.
+- `POLYMARKET_GAMMA_API_URL`: Polymarket Gamma API base URL (default `https://gamma-api.polymarket.com`).
+- `POLYMARKET_CLOB_API_URL`: Polymarket CLOB API base URL (default `https://clob.polymarket.com`).
+- `POLYMARKET_API_TIMEOUT_MS`: Upstream API timeout in ms (default `12000`).
 - `PORT`: Backend port (default `3001`).
 - `INDEXER_START_BLOCK`: Optional starting block for backfills.
 - `INDEXER_CONFIRMATIONS`: Number of confirmations before indexing (default `3`).
