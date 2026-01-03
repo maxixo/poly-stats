@@ -4,7 +4,21 @@ import { fetchClobTrades } from "./polymarketService.js";
 import { normalizeAddress } from "../utils/validation.js";
 import { syncMarketsByIds } from "./marketSyncService.js";
 
-type TradeInsert = Omit<TradeDoc, "createdAt" | "updatedAt" | "_id">;
+type TradeInsert = {
+  wallet: string;
+  marketId: string;
+  side: TradeDoc["side"];
+  price: number;
+  size: number;
+  timestamp: Date;
+  source: string;
+  tradeId: string;
+  maker?: string;
+  taker?: string;
+  txHash?: string;
+  logIndex?: number;
+  blockNumber?: number;
+};
 
 type TradePayload = Record<string, unknown>;
 

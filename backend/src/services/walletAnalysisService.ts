@@ -20,6 +20,7 @@ export type WalletLeaderboardItem = {
   roi: number;
   totalVolume: number;
   score: number;
+  topCategory: string;
 };
 
 export type WalletLeaderboardSummary = {
@@ -32,7 +33,7 @@ export type WalletLeaderboardSummary = {
 
 export type WalletLeaderboardResponse = {
   range: { start: Date; end: Date; days: number };
-  filters: { minWinRate: number; minTrades: number; minProfit: number; limit: number };
+  filters: { minWinRate: number; minTrades: number; minProfit: number; limit: number; category?: string };
   summary: WalletLeaderboardSummary;
   wallets: WalletLeaderboardItem[];
 };
@@ -516,12 +517,22 @@ export const getWalletLeaderboard = async (
   limit: number,
   minWinRate: number,
   minTrades: number,
-  minProfit: number
+  minProfit: number,
+  category?: string
 ): Promise<WalletLeaderboardResponse> => {
   const range = getRange(clampDays(days, 30));
   const trades = (await Trade.find({
     timestamp: { $gte: range.start, $lte: range.end }
   }).lean()) as TradeDoc[];
+
+  const marketIds = [...new Set(trades.map((trade) => trade.marketId))];
+  const marketMap = new Map<string, { category?: string }>();
+  if (marketIds.length) {
+    const markets = await Market.find({ marketId: { $in: marketIds } }).lean();
+    markets.forEach((market) => {
+      marketMap.set(market.marketId, { category: market.category });
+    });
+  }
 
   const grouped = new Map<string, TradeDoc[]>();
   for (const trade of trades) {
@@ -538,6 +549,17 @@ export const getWalletLeaderboard = async (
     const positions = buildPositionSummaries(walletTrades, marks);
     const performance = computePerformance(walletTrades, marks, positions);
     totalTrades += walletTrades.length;
+
+    const categoryCounts = new Map<string, number>();
+    for (const trade of walletTrades) {
+      const tradeCategory = marketMap.get(trade.marketId)?.category || "Uncategorized";
+      categoryCounts.set(tradeCategory, (categoryCounts.get(tradeCategory) || 0) + 1);
+    }
+    const topCategory =
+      [...categoryCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "Uncategorized";
+    if (category && !categoryCounts.has(category)) {
+      continue;
+    }
 
     if (performance.totalTrades < minTrades) {
       continue;
@@ -561,7 +583,8 @@ export const getWalletLeaderboard = async (
       avgPositionSize: performance.avgPositionSize,
       roi: performance.roi,
       totalVolume: performance.totalVolume,
-      score
+      score,
+      topCategory
     });
   }
 
@@ -582,7 +605,8 @@ export const getWalletLeaderboard = async (
       minWinRate,
       minTrades,
       minProfit,
-      limit
+      limit,
+      category
     },
     summary: {
       totalWallets: ranked.length,

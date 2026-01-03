@@ -1,7 +1,18 @@
 ﻿import type { NextFunction, Request, Response } from "express";
 import Trade from "../models/Trade.js";
 import { getWalletAnalytics } from "../services/analyticsService.js";
+import { getWalletAnalysis, getWalletLeaderboard } from "../services/walletAnalysisService.js";
+import { getTopWalletInsights } from "../services/walletInsightsService.js";
+import { syncPolymarketTrades } from "../services/tradeSyncService.js";
+import { syncMarkets } from "../services/marketSyncService.js";
 import { addressSchema, normalizeAddress } from "../utils/validation.js";
+
+const getNumber = (value: unknown, fallback: number): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
 export const getTopWallets = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -43,6 +54,78 @@ export const getTopWallets = async (req: Request, res: Response, next: NextFunct
     }
 
     res.json({ wallets });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWalletLeaderboardApi = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const days = clamp(getNumber(req.query.days, 30), 1, 180);
+    const limit = clamp(getNumber(req.query.limit, 20), 1, 50);
+    const minWinRate = clamp(getNumber(req.query.minWinRate, 0.75), 0, 1);
+    const minTrades = clamp(getNumber(req.query.minTrades, 20), 1, 1000);
+    const minProfit = getNumber(req.query.minProfit, 0);
+    const category = typeof req.query.category === "string" && req.query.category.trim() ? req.query.category.trim() : undefined;
+
+    console.log("[wallets] leaderboard", { days, limit, minWinRate, minTrades, minProfit, category });
+    const payload = await getWalletLeaderboard(days, limit, minWinRate, minTrades, minProfit, category);
+    res.json(payload);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWalletAnalysisApi = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const wallet = addressSchema.parse(req.params.address);
+    const normalized = normalizeAddress(wallet);
+    const days = clamp(getNumber(req.query.days, 30), 1, 180);
+    const payload = await getWalletAnalysis(normalized, days);
+    res.json(payload);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWalletInsightsApi = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const days = clamp(getNumber(req.query.days, 30), 1, 180);
+    const limit = clamp(getNumber(req.query.limit, 20), 1, 50);
+    const minWinRate = clamp(getNumber(req.query.minWinRate, 0.75), 0, 1);
+    const minTrades = clamp(getNumber(req.query.minTrades, 20), 1, 1000);
+    const minProfit = getNumber(req.query.minProfit, 0);
+    const force = String(req.query.force || "").toLowerCase() === "true";
+
+    const payload = await getTopWalletInsights({ days, limit, minWinRate, minTrades, minProfit, force });
+    res.json(payload);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const syncWalletData = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const token = req.headers["x-sync-token"];
+    if (process.env.SYNC_TOKEN && token !== process.env.SYNC_TOKEN) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const tradeResult = await syncPolymarketTrades();
+    const marketCount = await syncMarkets();
+    res.json({ trades: tradeResult, markets: { inserted: marketCount } });
   } catch (error) {
     next(error);
   }

@@ -13,6 +13,34 @@ export type WalletMetrics = {
   strategyTags: string[];
 };
 
+export type WalletPerformanceMetrics = {
+  totalProfit: number;
+  totalLoss: number;
+  netProfit: number;
+  winRate: number;
+  avgProfitPerTrade: number;
+  largestWin: number;
+  largestLoss: number;
+  profitFactor: number;
+  roi: number;
+  avgTradeSize: number;
+  avgPositionSize: number;
+  totalTrades: number;
+  totalVolume: number;
+  drawdown: number;
+  sharpeRatio: number;
+  volatility: number;
+  activePositions: number;
+};
+
+export type WalletBehaviorMetrics = {
+  tradesPerDay: number;
+  tradesPerWeek: number;
+  avgHoldHours: number;
+  minHoldHours: number;
+  maxHoldHours: number;
+};
+
 export type TradeRecord = {
   wallet: string;
   marketId: string;
@@ -30,6 +58,84 @@ export type TrendingMarket = {
   volume: number;
   lastPrice: number;
   tradeCount: number;
+};
+
+export type WalletLeaderboardItem = {
+  wallet: string;
+  totalProfit: number;
+  totalLoss: number;
+  netProfit: number;
+  winRate: number;
+  tradeCount: number;
+  avgTradeSize: number;
+  avgPositionSize: number;
+  roi: number;
+  totalVolume: number;
+  score: number;
+  topCategory: string;
+};
+
+export type WalletLeaderboardResponse = {
+  range: { start: string; end: string; days: number };
+  filters: { minWinRate: number; minTrades: number; minProfit: number; limit: number; category?: string };
+  summary: { totalWallets: number; totalTrades: number; averageWinRate: number; averageRoi: number; averageProfit: number };
+  wallets: WalletLeaderboardItem[];
+};
+
+export type ProfitPoint = {
+  timestamp: string;
+  cumulativeProfit: number;
+  roi: number;
+};
+
+export type HoldTimeBucket = {
+  label: string;
+  count: number;
+  averageProfit: number;
+};
+
+export type CategoryStat = {
+  category: string;
+  tradeCount: number;
+  winRate: number;
+  profit: number;
+  roi: number;
+};
+
+export type TopTrade = {
+  marketId: string;
+  question: string | null;
+  category: string;
+  side: TradeSide;
+  entryPrice: number;
+  exitPrice: number;
+  entryTime: string;
+  exitTime: string;
+  size: number;
+  profit: number;
+  roi: number;
+  holdHours: number;
+};
+
+export type WalletAnalysisResponse = {
+  wallet: string;
+  range: { start: string; end: string; days: number };
+  performance: WalletPerformanceMetrics;
+  behavior: WalletBehaviorMetrics;
+  profitSeries: ProfitPoint[];
+  holdTimeDistribution: HoldTimeBucket[];
+  topTrades: TopTrade[];
+  categoryStats: CategoryStat[];
+  trades: TradeRecord[];
+};
+
+export type WalletInsightsResponse = {
+  scope: string;
+  rangeDays: number;
+  generatedAt: string;
+  model: string;
+  insights: Record<string, unknown> | null;
+  rawText: string;
 };
 
 export type SignalItem = {
@@ -63,6 +169,7 @@ export type TrendingResponse = {
 
 export type GammaMarketsResponse = unknown;
 export type ClobMarketsResponse = unknown;
+export type MarketCategoriesResponse = { categories: string[] };
 
 export type TradeTx = {
   to: string;
@@ -127,9 +234,16 @@ const request = async <T>(path: string, options: RequestInit = {}): Promise<T> =
 
 export const api = {
   getTrending: () => request<TrendingResponse>("/api/markets/trending"),
+  getMarketCategories: () => request<MarketCategoriesResponse>("/api/markets/categories"),
   getGammaMarkets: (params?: QueryParams) => request<GammaMarketsResponse>(withQuery("/api/markets/gamma", params)),
   getClobMarkets: (params?: QueryParams) => request<ClobMarketsResponse>(withQuery("/api/markets/clob", params)),
   getTopWallets: (limit = 10) => request<TopWalletsResponse>(`/api/wallets/top?limit=${limit}`),
+  getWalletLeaderboard: (params?: QueryParams) =>
+    request<WalletLeaderboardResponse>(withQuery("/api/wallets/leaderboard", params)),
+  getWalletAnalysis: (address: string, params?: QueryParams) =>
+    request<WalletAnalysisResponse>(withQuery(`/api/wallets/${address}/analysis`, params)),
+  getWalletInsights: (params?: QueryParams) =>
+    request<WalletInsightsResponse>(withQuery("/api/wallets/insights", params)),
   getWallet: (address: string) => request<WalletDetailResponse>(`/api/wallets/${address}`),
   subscribeCopy: (data: {
     follower: string;

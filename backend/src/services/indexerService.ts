@@ -22,7 +22,18 @@ type ParsedArgs = {
   size: bigint;
 };
 
-type TradeInsert = Omit<TradeDoc, "createdAt" | "updatedAt">;
+type TradeInsert = {
+  wallet: string;
+  marketId: string;
+  side: TradeDoc["side"];
+  price: number;
+  size: number;
+  txHash: string;
+  logIndex: number;
+  blockNumber: number;
+  timestamp: Date;
+  source: string;
+};
 
 const getEnvNumber = (key: string, fallback: number | null): number | null => {
   const value = process.env[key];
@@ -135,7 +146,8 @@ const buildTrades = async (
       txHash: log.transactionHash,
       logIndex: getLogIndex(log),
       blockNumber: log.blockNumber,
-      timestamp
+      timestamp,
+      source: "indexer"
     });
   }
 

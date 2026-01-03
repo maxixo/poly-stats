@@ -75,7 +75,7 @@ export const getTopWalletInsights = async (options: {
     }
   }
 
-  const leaderboard = await getWalletLeaderboard(days, limit, minWinRate, minTrades, minProfit);
+  const leaderboard = await getWalletLeaderboard(days, limit, minWinRate, minTrades, minProfit, undefined);
   const topWallets = leaderboard.wallets.slice(0, Math.min(limit, 8));
   const analyses = await Promise.all(
     topWallets.map((wallet) => getWalletAnalysis(wallet.wallet, days, 50))
@@ -108,13 +108,14 @@ export const getTopWalletInsights = async (options: {
 
   const model = getEnvString("GEMINI_MODEL", "gemini-1.5-flash");
   const generatedAt = new Date();
+  const insightsPayload = response.parsed ?? { raw: response.rawText };
   await WalletInsight.create({
     scope,
     rangeDays: days,
     rangeStart: leaderboard.range.start,
     rangeEnd: leaderboard.range.end,
     model,
-    payload: response.parsed ?? null,
+    payload: insightsPayload,
     generatedAt
   });
 
@@ -123,7 +124,7 @@ export const getTopWalletInsights = async (options: {
     rangeDays: days,
     generatedAt,
     model,
-    insights: response.parsed ?? null,
+    insights: insightsPayload,
     rawText: response.rawText
   };
 };

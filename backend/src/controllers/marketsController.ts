@@ -1,5 +1,5 @@
 ﻿import type { NextFunction, Request, Response } from "express";
-import { getTrendingMarkets, getSignalFeed } from "../services/marketService.js";
+import { getTrendingMarkets, getSignalFeed, getMarketCategories } from "../services/marketService.js";
 import { fetchGammaMarkets, fetchClobMarkets } from "../services/polymarketService.js";
 
 export const getTrending = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -25,6 +25,19 @@ export const getClobMarkets = async (req: Request, res: Response, next: NextFunc
   try {
     const payload = await fetchClobMarkets(req.query as Record<string, unknown>);
     res.json(payload);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMarketCategoriesApi = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const categories = await getMarketCategories();
+    res.json({ categories });
   } catch (error) {
     next(error);
   }

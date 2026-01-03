@@ -1,4 +1,5 @@
 import Trade, { type TradeDoc } from "../models/Trade.js";
+import Market from "../models/Market.js";
 import { fetchGammaMarkets } from "./polymarketService.js";
 
 export type TrendingMarket = {
@@ -165,5 +166,22 @@ export const getSignalFeed = async (): Promise<SignalItem[]> => {
     }));
   } catch {
     return [];
+  }
+};
+
+export const getMarketCategories = async (): Promise<string[]> => {
+  try {
+    const categories = await Market.distinct("category");
+    const cleaned = categories
+      .filter((category): category is string => typeof category === "string")
+      .map((category) => category.trim())
+      .filter((category) => category.length > 0);
+    const unique = Array.from(new Set(cleaned)).sort((a, b) => a.localeCompare(b));
+    if (!unique.includes("Uncategorized")) {
+      unique.push("Uncategorized");
+    }
+    return unique;
+  } catch {
+    return ["Uncategorized"];
   }
 };
