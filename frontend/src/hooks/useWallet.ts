@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserProvider } from "ethers";
+import type { Eip1193Provider } from "ethers";
 import {
   WALLET_STORAGE_KEY,
   buildWalletOptions,
@@ -15,6 +16,13 @@ const POLYGON_CHAIN_ID = 137;
 type EthereumHandler = (accounts: string[]) => void;
 
 type ChainHandler = (chainId: string) => void;
+
+type ProviderEventHandler = EthereumHandler | ChainHandler;
+
+type EventedProvider = Eip1193Provider & {
+  on?: (event: string, handler: ProviderEventHandler) => void;
+  removeListener?: (event: string, handler: ProviderEventHandler) => void;
+};
 
 const readStoredWallet = (): WalletType | null => {
   if (typeof window === "undefined") {
@@ -152,7 +160,7 @@ export const useWallet = () => {
     if (!walletType) {
       return;
     }
-    const rawProvider = getWalletProvider(walletType);
+    const rawProvider = getWalletProvider(walletType) as EventedProvider | null;
     if (!rawProvider) {
       return;
     }

@@ -93,3 +93,10 @@ export const fetchClobMarkets = async (query: Record<string, unknown>): Promise<
   const url = buildUrl(baseUrl, "markets", query);
   return requestJson<unknown>(url);
 };
+
+export const fetchClobTrades = async (query: Record<string, unknown>): Promise<unknown> => {
+  const baseUrl = normalizeBaseUrl(process.env.POLYMARKET_CLOB_API_URL, DEFAULT_CLOB_API_URL);
+  const path = process.env.POLYMARKET_TRADES_PATH || "trades";
+  const url = buildUrl(baseUrl, path, query);
+  return requestJson<unknown>(url);
+};
